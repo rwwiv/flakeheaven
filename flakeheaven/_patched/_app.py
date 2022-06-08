@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 # external
 from flake8.main.application import Application
 from flake8.options.config import ConfigParser, get_local_plugins
+from flake8.options.manager import Option
 from flake8.plugins.manager import ReportFormatters
 from flake8.utils import parse_unified_diff
 
@@ -59,16 +60,56 @@ class FlakeHeavenApplication(Application):
         group.add_argument('--safe', action='store_true', help='suppress exceptions from plugins')
         self._option_manager = manager
 
-    def get_toml_config(self, path: Path = None) -> Dict[str, Any]:
+    def get_toml_config(
+        self,
+        path: Optional[Path] = None,
+        *,
+        enforce_keys_from: Dict[str, Option],
+    ) -> Dict[str, Any]:
+        """Extract config from TOML.
+
+        Args:
+            path: toml filepath. If not set, searches in cwd parents.
+            enforce_keys_from: Mapping of configuration option names to
+             :class:`~flake8.options.manager.Option` instances. It is
+             used to convert ``dashed-names`` in `toml` to
+             :class:`~flake8.options.config.ConfigParser` namespace so
+             it can be updated via its ``__dict__``. Typically, it comes
+             from either
+             :attr:`~flake8.options.config.ConfigParser.config_options`,
+             or directly from
+             :attr:`~flake8.options.manager.OptionManager.config_options_dict`.
+        """
         if path is not None:
-            return read_config(path)
-        # lookup for config from current dir up to root
-        root = Path().resolve()
-        for dir_path in chain([root], root.parents):
-            path = dir_path / 'pyproject.toml'
-            if path.exists():
-                return read_config(path)
-        return dict()
+            toml_config = read_config(path)
+        else:
+            # lookup for config from current dir up to root
+            root = Path().resolve()
+            for dir_path in chain([root], root.parents):
+                path = dir_path / 'pyproject.toml'
+                if path.exists():
+                    toml_config = read_config(path)
+                    break
+            else:
+                toml_config = {}
+
+        for name in list(toml_config.keys()):
+            try:
+                option = enforce_keys_from[name]
+                dst = option.config_name
+                if dst == name:
+                    continue
+                if dst is None:
+                    raise ValueError(
+                        f'Unable to parse `{path}`. '
+                        f'Reason: option {option}.config_name not set. '
+                        f'Maybe its not enabled as `parse_from_config`?'  # noqa: C812
+                    )
+            except KeyError:
+                continue
+
+            toml_config[dst] = toml_config.pop(name)
+        return toml_config
 
     @staticmethod
     def extract_toml_config_path(argv: List[str]) -> Tuple[Optional[Path], List[str]]:
@@ -110,11 +151,6 @@ class FlakeHeavenApplication(Application):
         config, _ = self.option_manager.parse_args([])
         config.__dict__.update(DEFAULTS)
 
-        # patch config wtih TOML
-        # If config is explicilty passed, it will be used
-        # If config isn't specified, flakeheaven will lookup for it
-        config.__dict__.update(self.get_toml_config(self._config_path))
-
         # Parse CLI options and legacy flake8 configs.
         # Based on `aggregate_options`.
         config_parser = ConfigParser(
@@ -122,8 +158,17 @@ class FlakeHeavenApplication(Application):
             config_finder=config_finder,
         )
         parsed_config = config_parser.parse()
+
+        toml_config = self.get_toml_config(
+            self._config_path,
+            enforce_keys_from=config_parser.config_options,
+        )
+
+        config.__dict__.update(toml_config)
+
         config.extended_default_select = self.option_manager.extended_default_select.copy()
         config.extended_default_ignore = self.option_manager.extended_default_ignore.copy()
+
         for config_name, value in parsed_config.items():
             dest_name = config_name
             # If the config name is somehow different from the destination name,
