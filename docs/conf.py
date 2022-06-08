@@ -7,8 +7,15 @@ from pathlib import Path
 
 # external
 import alabaster
-from recommonmark.transform import AutoStructify
 
+# app
+from flakeheaven import __version__
+
+_docs_dir = Path(__file__).parent.resolve()
+_root_dir = _docs_dir.parent
+_package = _root_dir / 'flakeheaven'
+_templates = _docs_dir / 'templates'
+_apidoc_dst = _docs_dir / 'apidoc'
 
 sys.path.append(os.path.abspath('../'))
 extensions = [
@@ -19,10 +26,11 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'recommonmark',
+    'sphinx.ext.napoleon',
+    'myst_parser',
 ]
 
-templates_path = ['_templates']
+templates_path = ['templates']
 source_suffix = ['.rst', '.md']
 root_doc = 'index'
 
@@ -30,17 +38,17 @@ project = 'FlakeHeaven'
 copyright = '{}, Gram (@orsinium)'.format(date.today().year)
 author = 'Gram (@orsinium)'
 
-version = '0.8.0'
+version = __version__
 release = version
 
-language = None
+language = 'en'
 exclude_patterns = []
 todo_include_todos = True
 
 pygments_style = 'sphinx'
 html_theme = 'alabaster'
 html_theme_path = [alabaster.get_path()]
-html_static_path = [str(Path(__file__).parent.parent / 'assets')]
+html_static_path = [str(_root_dir / 'assets')]
 html_theme_options = {
     # 'logo': 'logo.png',
     # 'logo_name': 'false',
@@ -60,6 +68,27 @@ html_theme_options = {
         'GitHub repository': 'https://github.com/flakeheaven/flakeheaven',
     },
 }
+
+
+# -- autodoc config ---------------------------------------------------
+autoclass_content = 'both'
+
+# -- napoleon config ---------------------------------------------------
+# See https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html#getting-started
+napoleon_google_docstring = True
+# napoleon_numpy_docstring = True
+napoleon_include_init_with_doc = True
+napoleon_include_private_with_doc = True
+# napoleon_include_special_with_doc = True
+# napoleon_use_admonition_for_examples = False
+# napoleon_use_admonition_for_notes = False
+# napoleon_use_admonition_for_references = False
+napoleon_preprocess_types = True
+# napoleon_use_ivar = False
+# napoleon_use_param = True
+# napoleon_use_rtype = True
+# napoleon_type_aliases = None
+napoleon_attr_annotations = True
 
 # -- Options for HTMLHelp output ------------------------------------------
 
@@ -96,12 +125,23 @@ texinfo_documents = [
 ]
 
 
-# https://github.com/rtfd/recommonmark/blob/master/docs/conf.py
+def run_apidoc(_):
+    from sphinx.ext.apidoc import main as apidoc_exec
+
+    exclude_patterns = (
+        _package / '__main__.py',
+    )
+    apidoc_exec([
+        f'--templatedir={_templates}',
+        '--separate',
+        '--module-first',
+        '--force',
+        '--private',
+        f'-o={_apidoc_dst}',
+        f'{_package}',
+        f'{", ".join(map(str, exclude_patterns))}',
+    ])
+
+
 def setup(app):
-    config = {
-        # 'url_resolver': lambda url: github_doc_root + url,
-        'auto_toc_tree_section': 'Contents',
-        'enable_eval_rst': True,
-    }
-    app.add_config_value('recommonmark_config', config, True)
-    app.add_transform(AutoStructify)
+    app.connect('builder-inited', run_apidoc)

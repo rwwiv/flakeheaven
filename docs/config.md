@@ -10,7 +10,7 @@ Config resolving order (every next step overwrites previous one):
 
 ## Plugins
 
-In `pyproject.toml` you can specify `[tool.flakeheaven.plugins]` table. It's a list of flake8 [plugins](plugins) and associated to them rules.
+In `pyproject.toml` you can specify `[tool.flakeheaven.plugins]` table. It's a list of flake8 [plugins](./plugins) and associated to them rules.
 
 Key can be exact plugin name or wildcard template. For example `"flake8-commas"` or `"flake8-*"`. FlakeHeaven will choose the longest match for every plugin if possible. In the previous example, `flake8-commas` will match to the first pattern, `flake8-bandit` and `flake8-bugbear` to the second, and `pycodestyle` will not match to any pattern.
 

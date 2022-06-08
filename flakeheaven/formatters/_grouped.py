@@ -23,7 +23,7 @@ class GroupedFormatter(ColoredFormatter):
         self._error_count = 0
 
     def handle(self, error: Violation) -> None:
-        """Processes each :term:`violation` to print it and all related."""
+        """Processes each :class:`flake8.style_guide.Violation` to print it and all related."""
         if error.filename not in self._proccessed_filenames:
             self._print_header(error.filename)
             self._proccessed_filenames.append(error.filename)
@@ -32,7 +32,7 @@ class GroupedFormatter(ColoredFormatter):
         self._error_count += 1
 
     def format(self, error: Violation) -> str:
-        """Called to format each individual :term:`violation`."""
+        """Called to format each individual :class:`flake8.style_guide.Violation`."""
         line = '  {row_col:<8} {code} {text}'.format(
             code=color_code(error.code),
             text=color_description(error.text),

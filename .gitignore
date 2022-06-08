@@ -1,11 +1,11 @@
 __pycache__/
 *.egg-info/
 dist/
-README.rst
-setup.py
 pip-wheel-metadata/
-docs/build/
 .mypy_cache/
 .pytest_cache/
 .flake8
 .python-version
+.vscode/launch.json
+docs/_build/
+docs/apidoc/

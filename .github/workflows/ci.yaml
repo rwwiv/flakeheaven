@@ -40,14 +40,13 @@ jobs:
       matrix:
         step: [
           # original from drone CI startlark file
-          # {env: "pytest", python: "3.6", extras: "main,dev", command: "pytest tests/"},  # disable or drop support?
           {env: "pytest", python: "3.7", extras: "", command: "pytest tests/"},
           {env: "pytest", python: "3.8", extras: "", command: "pytest tests/"},
           {env: "pytest", python: "3.9", extras: "", command: "pytest tests/"},
           {env: "main", python: "3.8", extras: "", command: "flakeheaven lint"},
           {env: "typing", python: "3.8", extras: "", command: "mypy --ignore-missing-imports --allow-redefinition flakeheaven/ > /dev/null || yes | mypy --install-types && mypy --ignore-missing-imports --allow-redefinition flakeheaven/"},
           # additional
-          {env: "docs", python: "3.8", extras: "-E docs", command: "sphinx-build -W docs docs/build"},
+          {env: "docs", python: "3.8", extras: "-E docs", command: "./scripts/docs-build"},
           {env: "isort", python: "3.8", extras: "", command: "isort --check flakeheaven"},
         ]
     container:
