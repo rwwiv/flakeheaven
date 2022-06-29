@@ -1,4 +1,5 @@
 # built-in
+import collections.abc
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict
@@ -43,15 +44,19 @@ def _read_remote(url: str) -> Dict[str, Any]:
     return _parse_config(response.data.decode())
 
 
-def _merge_configs(*configs) -> Dict[str, Any]:
-    config = defaultdict(dict)  # type: Dict[str, Any]
-    for subconfig in configs:
-        config.update(subconfig)
+def _deep_update(old_dict, new_dict) -> Dict[str, Any]:
+    for key, value in new_dict.items():
+        if isinstance(value, collections.abc.Mapping):
+            old_dict[key] = _deep_update(old_dict.get(key, {}), value)
+        else:
+            old_dict[key] = value
+    return old_dict
 
-    for section in ('plugins', 'exceptions'):
-        for subconfig in configs:
-            if section in subconfig:
-                config[section].update(subconfig[section])
+
+def _merge_configs(*configs) -> Dict[str, Any]:
+    config: Dict[str, Any] = defaultdict(dict)
+    for subconfig in configs:
+        _deep_update(config, subconfig)
 
     return dict(config)
 
